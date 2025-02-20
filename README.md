@@ -7,7 +7,7 @@ A fetch tool thats fast and written in bash with under 100 lines of code (includ
 * tiny (96 lines as of right now)
 
 # installing
-```yay lfetch```
+```$ yay lfetch```
 
 # roadmap
 * big/small varients or logos
