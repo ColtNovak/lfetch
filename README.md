@@ -7,7 +7,9 @@ A fetch tool thats fast and written in bash with under 100 lines of code (includ
 * tiny (96 lines as of right now)
 
 # installing
-clone the repo
-cd lfetch
-chmod +x ./lfetch.sh
-./lfetch.sh
+```yay lfetch```
+
+# roadmap
+* big/small varients or logos
+* logos for all major distros
+* adding more customization and 
