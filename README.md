@@ -1,7 +1,8 @@
 # Lfetch
 A fetch tool thats fast and written in bash with under 100 lines of code (including logos!)
 ![image](https://github.com/user-attachments/assets/6755ebbd-2e20-4210-a9f5-38092e0ecb07)
-
+# notice
+the aur package is currently broken someone please fix lol
 # Features
 * Dependency free
 * Really fast (5ms!)
