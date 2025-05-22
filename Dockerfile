@@ -19,11 +19,10 @@ RUN git clone https://aur.archlinux.org/yay.git && \
 
 RUN yay -S ttyd --noconfirm --cleanafter
 
-RUN sudo rm -rf /home/user/.cache/yay/lfetch && \
+RUN sudo rm -rf ~/.cache/yay/lfetch && \
     yay -S lfetch --noconfirm \
       --answerclean All \
       --answerdiff None \
-      --removemake \
       --cleanafter && \
     sudo pacman -Scc --noconfirm
 
