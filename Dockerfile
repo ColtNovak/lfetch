@@ -7,6 +7,7 @@ RUN pacman -Syu --noconfirm && \
     sudo \
     cmake \
     make \
+    Libwebsockets \
     gcc \
     pkg-config \
     vte3 \
