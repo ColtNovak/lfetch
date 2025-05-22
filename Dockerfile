@@ -27,4 +27,4 @@ RUN pacman -Scc --noconfirm && \
     rm -rf /var/cache/pacman/pkg/* /home/builder/*
 
 EXPOSE 8080
-CMD ["sh", "-c", "ttyd -p 8080 -t titleFixed='lfetch' -t reconnectTimeout=30 -t enableTrzsz=true bash -c 'while true; do rm -rf ~/.cache/lfetch; lfetch; sleep 30; done'"]
+CMD ["ttyd", "-p", "8080", "rmath"]
