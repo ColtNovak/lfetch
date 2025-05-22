@@ -41,4 +41,4 @@ RUN pacman -Scc --noconfirm && \
     rm -rf /home/builder/* /var/cache/pacman/pkg/*
 
 EXPOSE 8080
-CMD ["sh", "-c", "ttyd -p 8080 -t titleFixed='Lfetch Terminal' -t reconnect=true -t reconnectTimeout=10 -t idleTimeout=0 bash -c 'while true; do clear; lfetch; sleep 30; done'"]
+CMD ["ttyd", "-p", "8080", "lfetch"]
