@@ -11,8 +11,7 @@ RUN pacman -Syu --noconfirm && \
     pkg-config \
     vte3 \
     json-c \
-    openssl \
-    python
+    openssl
 
 RUN useradd -m builder && \
     echo "builder ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/builder
@@ -24,14 +23,14 @@ RUN git clone https://github.com/ColtNovak/lfetch.git && \
     cd lfetch && \
     sudo mkdir -p /usr/share/lfetch/logos && \
     sudo cp -r logos/* /usr/share/lfetch/logos/ && \
-    sudo cp Lfetch.sh /usr/local/bin/lfetch && \
+    sudo cp lfetch.sh /usr/local/bin/lfetch && \
     sudo chmod +x /usr/local/bin/lfetch
 
 RUN git clone https://github.com/tsl0922/ttyd.git && \
     cd ttyd && \
     mkdir build && \
     cd build && \
-    cmake -DCMAKE_BUILD_TYPE=Release .. && \
+    cmake .. && \
     make && \
     sudo make install
 
