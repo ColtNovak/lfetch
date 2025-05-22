@@ -7,7 +7,7 @@ RUN pacman -Syu --noconfirm && \
     sudo \
     cmake \
     make \
-    Libwebsockets \
+    libwebsockets \
     gcc \
     pkg-config \
     vte3 \
@@ -19,7 +19,7 @@ RUN useradd -m builder && \
 
 USER builder
 WORKDIR /home/builder
-
+RUN sudo rm -rf /usr/share/lfetch/
 RUN git clone https://github.com/ColtNovak/lfetch.git && \
     cd lfetch && \
     sudo mkdir -p /usr/share/lfetch/logos && \
@@ -33,7 +33,7 @@ RUN git clone https://github.com/tsl0922/ttyd.git && \
     cd build && \
     cmake -DCMAKE_BUILD_TYPE=Release .. && \
     make && \
-    make install
+    sudo make install
 
 USER root
 
