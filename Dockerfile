@@ -15,10 +15,10 @@ RUN git clone https://aur.archlinux.org/yay.git && \
     cd .. && \
     rm -rf yay && \
     rm -rf ~/.cache/yay
-
+RUN yay -s ttyd --noconfirm --clean 
 RUN yay -S lfetch --noconfirm --clean && \
     sudo rm -rf /var/cache/pacman/pkg/* && \
     rm -rf ~/.cache/yay && \
     rm -rf ~/.build
 
-CMD ["lfetch"]
+CMD ["ttyd", "-p", "8080", "lfetch"]
