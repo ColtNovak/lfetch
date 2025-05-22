@@ -1,29 +1,39 @@
 FROM archlinux:latest
 
 RUN pacman -Syu --noconfirm && \
-    pacman -S --noconfirm base-devel git sudo && \
-    rm -rf /var/cache/pacman/pkg/*
+    pacman -S --noconfirm \
+    base-devel \
+    git \
+    sudo
 
-RUN useradd -m -G wheel -s /bin/bash user && \
-    echo "%wheel ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
+RUN useradd -m builder && \
+    echo "builder ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/builder
 
-USER user
-WORKDIR /home/user
+USER builder
+WORKDIR /home/builder
 
 RUN git clone https://aur.archlinux.org/yay.git && \
     cd yay && \
-    makepkg -si --noconfirm --skippgpcheck && \
-    cd .. && \
-    rm -rf yay && \
-    yay -Scc --noconfirm
+    makepkg -si --noconfirm
 
-RUN yay -S ttyd --noconfirm --cleanafter
+RUN yay -S --noconfirm lfetch
 
-RUN sudo rm -rf ~/.cache/yay/lfetch && \
-    yay -S lfetch --noconfirm \
-      --answerclean All \
-      --answerdiff None \
-      --cleanafter && \
-    sudo pacman -Scc --noconfirm
+USER root
+
+RUN pacman -S --noconfirm \
+    bash \
+    git clone https://github.com/tsl0922/ttyd.git && \
+    cd ttyd && \
+    mkdir build && \
+    cd build && \
+    cmake -DCMAKE_BUILD_TYPE=Release .. && \
+    make && \
+    make install
+
+RUN pacman -Scc --noconfirm && \
+    rm -rf /home/builder/yay /var/cache/pacman/pkg/*
+
+WORKDIR /data
+EXPOSE 8080
 
 CMD ["ttyd", "-p", "8080", "lfetch"]
