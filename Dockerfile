@@ -14,9 +14,14 @@ RUN git clone https://aur.archlinux.org/yay.git && \
     cd yay && \
     makepkg -si --noconfirm --skippgpcheck && \
     cd .. && \
-    rm -rf yay
+    rm -rf yay && \
+    yay -Scc --noconfirm
 
-RUN yay -S ttyd lfetch --noconfirm --cleanafter && \
+RUN yay -S ttyd --noconfirm --cleanafter && \
+    sudo rm -rf /var/cache/pacman/pkg/*
+
+RUN rm -rf ~/.cache/yay/lfetch && \
+    yay -S lfetch --noconfirm --cleanafter --noremovemake && \
     sudo pacman -Scc --noconfirm
 
-CMD ["ttyd", "-p", "8080", "lfetch"]
+CMD ["ttyd", "-p", "8080", "lfetch -c"]
