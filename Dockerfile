@@ -24,8 +24,6 @@ RUN git clone https://github.com/ColtNovak/lfetch.git && \
     cd lfetch && \
     sudo mkdir -p /usr/share/lfetch/logos && \
     sudo cp -r logos/* /usr/share/lfetch/logos/ && \
-    sudo cp logos/arch /usr/share/lfetch/logos/Arch && \
-    sudo sed -i "s/for distro in .*/for distro in Arch arch ARCH; do/" lfetch.sh && \
     sudo cp lfetch.sh /usr/local/bin/lfetch && \
     sudo chmod +x /usr/local/bin/lfetch
 
