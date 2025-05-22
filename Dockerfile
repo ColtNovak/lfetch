@@ -27,4 +27,4 @@ RUN pacman -Scc --noconfirm && \
     rm -rf /var/cache/pacman/pkg/* /home/builder/*
 
 EXPOSE 8080
-CMD ["ttyd", "-p", "8080", "rmath"]
+CMD ["ttyd", "-p", "8080", "lfetch"]
