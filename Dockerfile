@@ -4,7 +4,15 @@ RUN pacman -Syu --noconfirm && \
     pacman -S --noconfirm \
     base-devel \
     git \
-    sudo
+    sudo \
+    cmake \
+    make \
+    gcc \
+    pkg-config \
+    vte3 \
+    json-c \
+    openssl \
+    python
 
 RUN useradd -m builder && \
     echo "builder ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/builder
@@ -12,28 +20,25 @@ RUN useradd -m builder && \
 USER builder
 WORKDIR /home/builder
 
-RUN git clone https://aur.archlinux.org/yay.git && \
-    cd yay && \
-    makepkg -si --noconfirm
+RUN git clone https://github.com/ColtNovak/lfetch.git && \
+    cd lfetch && \
+    sudo mkdir -p /usr/share/lfetch/logos && \
+    sudo cp -r logos/* /usr/share/lfetch/logos/ && \
+    sudo cp Lfetch.sh /usr/local/bin/lfetch && \
+    sudo chmod +x /usr/local/bin/lfetch
 
-RUN yay -S --noconfirm lfetch
-
-USER root
-
-RUN pacman -S --noconfirm \
-    bash \
-    git clone https://github.com/tsl0922/ttyd.git && \
+RUN git clone https://github.com/tsl0922/ttyd.git && \
     cd ttyd && \
     mkdir build && \
     cd build && \
     cmake -DCMAKE_BUILD_TYPE=Release .. && \
     make && \
-    make install
+    sudo make install
+
+USER root
 
 RUN pacman -Scc --noconfirm && \
-    rm -rf /home/builder/yay /var/cache/pacman/pkg/*
+    rm -rf /home/builder/* /var/cache/pacman/pkg/*
 
-WORKDIR /data
 EXPOSE 8080
-
 CMD ["ttyd", "-p", "8080", "lfetch"]
