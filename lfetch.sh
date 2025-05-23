@@ -13,10 +13,7 @@ logo_dirs=(
 )
 
 for dir in "${logo_dirs[@]}"; do
-    if [[ -d "$dir" ]]; then
-        logod="$dir"
-        break
-    fi
+    [[ -d "$dir" ]] && { logod="$dir"; break; }
 done
 
 [[ -z "$logod" ]] && logod="/dev/null"
@@ -28,7 +25,7 @@ M=$'\033[95m' CYAN=$'\033[96m' WH=$'\033[97m'
 if [[ ! -f "$cache_dir/static" ]]; then
     {
         IFS=\" read _ d _ < /etc/os-release
-        grep -m1 'model name' /proc/cpuinfo | cut -d: -f2 | sed 's/  */ /g' | read cpu
+        cpu=$(grep -m1 'model name' /proc/cpuinfo | cut -d: -f2 | sed 's/  */ /g')
         printf "h='%s'\nu='%s'\no='%s'\nsh='%s'\nd='%s'\ncpu='%s'\ncores=%d\n" \
             "$HOSTNAME" "${USER:-$USER}" "${OSTYPE%%[-_]*}" "${SHELL##*/}" \
             "${d%% *}" "$cpu" $(nproc)
@@ -39,8 +36,10 @@ fi
 if [[ ! -f "$cache_dir/dyn" || $(( $(date +%s) - $(stat -c %Y "$cache_dir/dyn") )) -gt 60 ]]; then
     {
         read -r up _ </proc/uptime
-        read -r _ mem _ mem_free _ <<< $(grep -m1 -e MemTotal -e MemAvailable /proc/meminfo)
-        read -r _ _ used disk_avail _ <<< $(df -k / | awk 'NR==2')
+        mem=$(grep MemTotal /proc/meminfo | awk '{print $2}')
+        mem_free=$(grep MemAvailable /proc/meminfo | awk '{print $2}')
+        used=$(df -k / | awk 'NR==2 {print $3}')
+        disk_avail=$(df -k / | awk 'NR==2 {print $4}')
         printf "k='%s'\nde='%s'\nup='%dh%02dm'\nmem='%dMB/%dMB'\ndisk='%dMB/%dMB'\nip='%s'\nload='%s'\n" \
             "$(uname -r)" "${XDG_CURRENT_DESKTOP:-?}" \
             $(( ${up%.*}/3600 )) $(( (${up%.*}%3600)/60 )) \
@@ -54,16 +53,13 @@ fi
 
 logof="Linux"
 for distro in "${d,,}" "${d^^}" "${d~~}"; do
-    if [[ -f "$logod/$distro" ]]; then
-        logof="$distro"
-        break
-    fi
+    [[ -f "$logod/$distro" ]] && { logof="$distro"; break; }
 done
 
 if [[ ! -f "$cache_dir/logo" || ! -f "$cache_dir/ansi" ]]; then
     declare -ai cl
     declare -a ansi
-    local w=0 line cle
+    w=0
     
     while IFS= read -r line; do
         ansi+=("$line")
@@ -86,8 +82,8 @@ i=(
     "${BOLD}${CYAN}Shell  ~ ${WH}$sh"
     "${BOLD}${CYAN}DE     ~ ${WH}$de"
     "${BOLD}${CYAN}Distro ~ ${WH}$d"
-    "${BOLD}${CYAN}Memory ~ ${WH}$mem"
-    "${BOLD}${CYAN}Disk   ~ ${WH}$disk"
+    "${BOLD}${CYAN}Memory ~ ${WH}$((mem/1024))MB/$((mem_free/1024))MB"
+    "${BOLD}${CYAN}Disk   ~ ${WH}$((used/1024))MB/$(( (used + disk_avail)/1024 ))MB"
     "${BOLD}${CYAN}IP     ~ ${WH}${ip:-N/A}"
     "${BOLD}${CYAN}Load   ~ ${WH}$load"
 )
