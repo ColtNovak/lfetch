@@ -1,7 +1,7 @@
 FROM archlinux:latest
 
 RUN pacman -Syu --noconfirm && \
-    pacman -S --noconfirm base-devel git sudo
+    pacman -S --noconfirm base-devel git
 
 RUN useradd -m -G wheel -s /bin/bash builder && \
     echo "%wheel ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
@@ -23,7 +23,7 @@ RUN yay -S lfetch ttyd --noconfirm \
     --cleanFROM archlinux:latest
 
 RUN pacman -Syu --noconfirm && \
-    pacman -S --noconfirm base-devel git sudo && \
+    pacman -S --noconfirm base-devel git  && \
     useradd -m -G wheel -s /bin/bash builder && \
     echo "%wheel ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
 
@@ -37,6 +37,8 @@ RUN git clone https://aur.archlinux.org/yay.git && \
     rm -rf yay && \
     sudo rm -rf /var/cache/pacman/pkg/*
 RUN rm -rf ~/.cache/yay/lfetch ~/.cache/yay/ttyd
+RUN rm -rf /usr/bin/lfetch
+
 RUN yay -S lfetch ttyd --noconfirm \
     --answerclean All \
     --removemake \
