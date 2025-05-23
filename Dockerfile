@@ -8,23 +8,22 @@ RUN useradd -m -G wheel -s /bin/bash builder && \
 
 USER builder
 WORKDIR /home/builder
+
 RUN git clone https://aur.archlinux.org/yay.git && \
     cd yay && \
     makepkg -si --noconfirm --skippgpcheck && \
     cd .. && \
     rm -rf yay
 
-RUN yay -S lfetch --noconfirm --answerclean All --removemake --cleanafter && \
-    sudo rm -rf /var/cache/pacman/pkg/* ~/.cache/yay
+RUN yay -S lfetch ttyd --noconfirm \
+    --answerclean All \
+    --removemake \
+    --cleanafter \
+    --clean
 
-USER root
-RUN mkdir -p /usr/share/lfetch/logos && \
-    cp -r /usr/lib/lfetch/logos/* /usr/share/lfetch/logos/ && \
-    chmod -R 755 /usr/share/lfetch/logos
-RUN pacman -S --noconfirm ttyd
-
-RUN pacman -Scc --noconfirm && \
-    rm -rf /var/cache/pacman/pkg/* /home/builder/*
+RUN sudo rm -rf /var/cache/pacman/pkg/* && \
+    rm -rf ~/.cache/yay
 
 EXPOSE 8080
+
 CMD ["ttyd", "-p", "8080", "lfetch"]
