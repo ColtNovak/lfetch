@@ -12,6 +12,7 @@ logo_dirs=(
     "/usr/local/share/lfetch/logos"     
 )
 
+logod=""
 for dir in "${logo_dirs[@]}"; do
     if [[ -d "$dir" ]]; then
         logod="$dir"
@@ -19,19 +20,16 @@ for dir in "${logo_dirs[@]}"; do
     fi
 done
 
-[[ -z "$logod" ]] && logod="/dev/null"
-
-R=$'\033[0m' BOLD=$'\033[1m'
-RED=$'\033[91m' GR=$'\033[92m' YE=$'\033[93m' BLUE=$'\033[94m'
-M=$'\033[95m' CYAN=$'\033[96m' WH=$'\033[97m'
+R=$'\033[0m'; BOLD=$'\033[1m' RED=$'\033[91m'; GR=$'\033[92m'; YE=$'\033[93m'; BLUE=$'\033[94m' 
+M=$'\033[95m'; CYAN=$'\033[96m'; WH=$'\033[97m'
 
 if [[ ! -f "$cache_dir/static" ]]; then
     {
-        IFS=\" read _ d _ < /etc/os-release
-        grep -m1 'model name' /proc/cpuinfo | cut -d: -f2 | sed 's/  */ /g' | read cpu
+        IFS=\" read -r _ d _ < /etc/os-release
+        cpu_info=$(grep -m1 'model name' /proc/cpuinfo | cut -d: -f2 | sed 's/  */ /g')
         printf "h='%s'\nu='%s'\no='%s'\nsh='%s'\nd='%s'\ncpu='%s'\ncores=%d\n" \
             "$HOSTNAME" "${USER:-$USER}" "${OSTYPE%%[-_]*}" "${SHELL##*/}" \
-            "${d%% *}" "$cpu" $(nproc)
+            "${d%% *}" "$cpu_info" $(nproc)
     } > "$cache_dir/static"
 fi
 . "$cache_dir/static"
@@ -39,13 +37,15 @@ fi
 if [[ ! -f "$cache_dir/dyn" || $(( $(date +%s) - $(stat -c %Y "$cache_dir/dyn") )) -gt 60 ]]; then
     {
         read -r up _ </proc/uptime
-        read -r _ mem _ mem_free _ <<< $(grep -m1 -e MemTotal -e MemAvailable /proc/meminfo)
-        read -r _ _ used disk_avail _ <<< $(df -k / | awk 'NR==2')
+        mem_info=$(grep -m1 -e MemTotal -e MemAvailable /proc/meminfo)
+        disk_info=$(df -k / | awk 'NR==2')
         printf "k='%s'\nde='%s'\nup='%dh%02dm'\nmem='%dMB/%dMB'\ndisk='%dMB/%dMB'\nip='%s'\nload='%s'\n" \
             "$(uname -r)" "${XDG_CURRENT_DESKTOP:-?}" \
             $(( ${up%.*}/3600 )) $(( (${up%.*}%3600)/60 )) \
-            $((mem/1024)) $((mem_free/1024)) \
-            $((used/1024)) $(( (used + disk_avail)/1024 )) \
+            $(( $(awk '/MemTotal/ {print $2}' <<< "$mem_info")/1024 )) \
+            $(( $(awk '/MemAvailable/ {print $2}' <<< "$mem_info")/1024 )) \
+            $(( $(awk '{print $3}' <<< "$disk_info")/1024 )) \
+            $(( ($(awk '{print $3+$4}' <<< "$disk_info"))/1024 )) \
             "$(ip -4 -br addr | awk 'NR>1 && $3 {print $3; exit}')" \
             "$(cut -d' ' -f1-3 /proc/loadavg)"
     } > "$cache_dir/dyn"
@@ -53,32 +53,43 @@ fi
 . "$cache_dir/dyn"
 
 logof="Linux"
-for distro in "${d,,}" "${d^^}" "${d~~}"; do
-    if [[ -f "$logod/$distro" ]]; then
-        logof="$distro"
-        break
-    fi
-done
+if [[ -n "$logod" ]]; then
+    for distro in "${d,,}" "${d^^}" "${d~~}"; do
+        if [[ -f "$logod/$distro" ]]; then
+            logof="$distro"
+            break
+        fi
+    done
+fi
 
-if [[ ! -f "$cache_dir/logo" || ! -f "$cache_dir/ansi" ]]; then
+if [[ -n "$logod" && -f "$logod/$logof" ]]; then
     declare -ai cl
     declare -a ansi
-    local w=0 line cle
+    w=0
     
     while IFS= read -r line; do
         ansi+=("$line")
-        cle=${line//\\033\[[0-9;]*m/}
-        cle=${cle%%+([[:space:]])}
-        (( (len=${#cle}) > w )) && w=$len
-        cl+=($len)
+        clean_line=${line//\\033\[[0-9;]*m/}
+        clean_line=${clean_line%%+([[:space:]])}
+        (( (len=${#clean_line}) > w )) && w=$len
+        cl+=("$len")
     done < "$logod/$logof"
     
     declare -p ansi cl > "$cache_dir/ansi"
     echo "w=$w" > "$cache_dir/logo"
 fi
-. "$cache_dir/ansi"; . "$cache_dir/logo"
 
-i=(
+if [[ -f "$cache_dir/ansi" && -f "$cache_dir/logo" ]]; then
+    . "$cache_dir/ansi"
+    . "$cache_dir/logo"
+else
+    # Fallback if no logo
+    ansi=()
+    cl=()
+    w=0
+fi
+
+info=(
     "${YE}$u@${M}$h"
     "${BOLD}${CYAN}OS     ~ ${WH}${o^}"
     "${BOLD}${CYAN}Kernel ~ ${WH}$k"
@@ -93,9 +104,9 @@ i=(
 )
 
 for idx in "${!ansi[@]}"; do
-    if (( idx < ${#i[@]} )); then
-        printf "%b %b%*s\n" "${ansi[idx]}" "${i[idx]}" \
-            $((w - cl[idx] - ${#i[idx]} + ${#BOLD} + ${#WH} + 10 )) ''
+    if (( idx < ${#info[@]} )); then
+        printf "%b %b%*s\n" "${ansi[idx]}" "${info[idx]}" \
+            $((w - cl[idx] - ${#info[idx]} + ${#BOLD} + ${#WH} + 10 )) ''
     else
         printf "%b%*s\n" "${ansi[idx]}" $((w - cl[idx])) ''
     fi
