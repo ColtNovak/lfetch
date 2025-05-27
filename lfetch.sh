@@ -15,7 +15,7 @@ get_info() {
     printf -v up "%dh%02dm" $((${up%.*}/3600)) $((${up%.*}%3600/60))
     mem=($(grep -m1 MemTotal /proc/meminfo | awk '{print $2/1024}') $(grep -m1 MemAvailable /proc/meminfo | awk '{print $2/1024}'))
     disk=($(df -k / | awk 'NR==2 {print $3/1024, ($3+$4)/1024}'))
-    ip=$(ip -4 -br a | awk 'NR>1 && $3 {sub(/\/.*/,"",$3); print $3; exit}')
+    ip=$(hostname -i)
     load=$(cut -d' ' -f1-3 /proc/loadavg)
 }
 
