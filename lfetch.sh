@@ -29,8 +29,12 @@ get_info() {
     mem=$(grep -m1 MemTotal /proc/meminfo | awk '{print $2/1024}')
     mem_free=$(grep -m1 MemAvailable /proc/meminfo | awk '{print $2/1024}')
     disk=$(df -k / | awk 'NR==2 {print $3/1024"MB/"($3+$4)/1024"MB"}')
-    ip=$(ip -o -4 addr show eth0 2>/dev/null | awk '{print $4}' || echo "N/A")
-    load=$(cut -d' ' -f1-3 /proc/loadavg)
+ip=$(
+  ip -o -4 addr show eth0 2>/dev/null | 
+  awk '{print $4}' | 
+  head -n1 | 
+  cut -d' ' -f1
+) || ip="N/A"    load=$(cut -d' ' -f1-3 /proc/loadavg)
     
     # Formatting
     printf -v up "%dh%02dm" $(( ${up%.*}/3600 )) $(( (${up%.*}%3600)/60 ))
