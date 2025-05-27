@@ -1,4 +1,4 @@
-FROM arm64v8/alpine:latest
+FROM alpine:3.14
 RUN apk update && apk add --no-cache bash git ttyd iproute2
 
 RUN git clone https://github.com/ColtNovak/lfetch.git && \
