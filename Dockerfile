@@ -1,22 +1,11 @@
-FROM --platform=linux/amd64 archlinux:latest
+FROM arm64v8/alpine:latest
+RUN apk update && apk add --no-cache bash git ttyd iproute2
 
-RUN pacman -Syu --noconfirm --needed \
-    base-devel git sudo fakeroot awk grep procps-ng
+RUN git clone https://github.com/ColtNovak/lfetch.git && \
+    install -Dm755 lfetch/lfetch.sh /usr/local/bin/lfetch && \
+    mkdir -p /usr/share/lfetch/logos && \
+    cp -r lfetch/logos/* /usr/share/lfetch/logos/ && \
+    rm -rf lfetch
 
-RUN useradd -m builder && \
-    echo "builder ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
-
-USER builder
-WORKDIR /home/builder
-
-RUN git clone https://aur.archlinux.org/yay.git && \
-    cd yay && \
-    makepkg -si --noconfirm --skippgpcheck && \
-    cd .. && \
-    rm -rf yay
-
-RUN yay -S --noconfirm ttyd lfetch --removemake --answerclean All --cleanafter
-
-RUN sudo rm -rf /var/cache/pemu-user-static
 EXPOSE 8080
-CMD ["ttyd", "-p", "8080", "lfetch"]
+CMD ["ttyd", "-p", "8080", "bash", "-c", "lfetch; exec bash"]
