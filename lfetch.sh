@@ -49,23 +49,26 @@ logo="Alpine"
 [[ -f "$logod/$logo" ]] || logo="Linux"
 
 declare -a ansi cl
-declare w=0 line cle  # Changed local to declare
+declare w=0 line cle
 
-# Read logo with proper ANSI handling
+# Read logo with proper ANSI conversion
 while IFS= read -r line; do
-    # Convert literal escapes to ANSI codes
-    line=${line//\\033/\x1b}
+    # Convert all escape code formats
+    line=${line//\\x1b/\033}
+    line=${line//\\033/\033}
+    line=${line//\x1b/\033}
     ansi+=("$line")
-    # Strip ANSI codes for length calculation
-    cle=${line//\x1b\[[0-9;]*m/}
+    # Calculate visible length
+    cle=${line//\033\[[0-9;]*m/}
     cle=${cle%%+([[:space:]])}
     (( (len=${#cle}) > w )) && w=$len
     cl+=("$len")
 done < <([[ -f "$logod/$logo" ]] && cat "$logod/$logo" || echo "NO LOGO FOUND")
 
-# Pad all lines to max width
+# Pad all logo lines to max width with ANSI reset
 for i in "${!ansi[@]}"; do
-    ansi[$i]=$(printf "%-${w}s" "${ansi[$i]}")
+    ansi[$i]="${ansi[$i]%%+([[:space:]])}"
+    ansi[$i]=$(printf "%-${w}s%s" "${ansi[$i]}" "${R}")
 done
 
 i=(
@@ -84,12 +87,12 @@ i=(
 
 for idx in "${!ansi[@]}"; do
     if (( idx < ${#i[@]} )); then
-        # Calculate visible text length without ANSI codes
-        visible_info=$(echo -e "${i[$idx]}" | sed 's/\x1b\[[0-9;]*m//g')
-        visible_len=${#visible_info}
+        # Calculate visible lengths
+        logo_visible=${ansi[$idx]//\033\[[0-9;]*m/}
+        logo_visible=${logo_visible%%+([[:space:]])}
+        info_visible=$(echo -e "${i[$idx]}" | sed 's/\x1b\[[0-9;]*m//g')
         
-        # Calculate padding
-        padding=$((w - cl[idx] - visible_len + 20))
+        padding=$((w - ${#logo_visible} - ${#info_visible} + 15))
         
         printf "%b %b%*s\n" "${ansi[$idx]}" "${i[$idx]}" "$padding" ""
     else
