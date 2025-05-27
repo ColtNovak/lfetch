@@ -9,6 +9,7 @@ logo_dirs=(
     "/usr/local/share/lfetch/logos"
 )
 
+# Find logo directory
 for dir in "${logo_dirs[@]}"; do
     [[ -d "$dir" ]] && logod="$dir" && break
 done
@@ -29,12 +30,13 @@ get_info() {
     mem=$(grep -m1 MemTotal /proc/meminfo | awk '{print $2/1024}')
     mem_free=$(grep -m1 MemAvailable /proc/meminfo | awk '{print $2/1024}')
     disk=$(df -k / | awk 'NR==2 {print $3/1024"MB/"($3+$4)/1024"MB"}')
-ip=$(
-  ip -o -4 addr show eth0 2>/dev/null | 
-  awk '{print $4}' | 
-  head -n1 | 
-  cut -d' ' -f1
-) || ip="N/A"    load=$(cut -d' ' -f1-3 /proc/loadavg)
+    ip=$(
+        ip -o -4 addr show eth0 2>/dev/null | 
+        awk '{print $4}' | 
+        head -n1 | 
+        cut -d' ' -f1
+    ) || ip="N/A"
+    load=$(cut -d' ' -f1-3 /proc/loadavg)
     
     # Formatting
     printf -v up "%dh%02dm" $(( ${up%.*}/3600 )) $(( (${up%.*}%3600)/60 ))
@@ -42,18 +44,29 @@ ip=$(
 
 get_info
 
+# Force Alpine logo detection
 logo="Alpine"
 [[ -f "$logod/$logo" ]] || logo="Linux"
 
 declare -a ansi cl
-w=0
+declare w=0 line cle  # Changed local to declare
+
+# Read logo with proper ANSI handling
 while IFS= read -r line; do
+    # Convert literal escapes to ANSI codes
+    line=${line//\\033/\x1b}
     ansi+=("$line")
-    cle=${line//\\033\[[0-9;]*m/}
+    # Strip ANSI codes for length calculation
+    cle=${line//\x1b\[[0-9;]*m/}
     cle=${cle%%+([[:space:]])}
     (( (len=${#cle}) > w )) && w=$len
     cl+=("$len")
 done < <([[ -f "$logod/$logo" ]] && cat "$logod/$logo" || echo "NO LOGO FOUND")
+
+# Pad all lines to max width
+for i in "${!ansi[@]}"; do
+    ansi[$i]=$(printf "%-${w}s" "${ansi[$i]}")
+done
 
 i=(
     "${YE}${USER}@${HOSTNAME}${M}"
@@ -71,10 +84,16 @@ i=(
 
 for idx in "${!ansi[@]}"; do
     if (( idx < ${#i[@]} )); then
-        printf "%b %b%*s\n" "${ansi[idx]}" "${i[idx]}" \
-            $((w - cl[idx] - ${#i[idx]} + 20 )) ''
+        # Calculate visible text length without ANSI codes
+        visible_info=$(echo -e "${i[$idx]}" | sed 's/\x1b\[[0-9;]*m//g')
+        visible_len=${#visible_info}
+        
+        # Calculate padding
+        padding=$((w - cl[idx] - visible_len + 20))
+        
+        printf "%b %b%*s\n" "${ansi[$idx]}" "${i[$idx]}" "$padding" ""
     else
-        printf "%b%*s\n" "${ansi[idx]}" $((w - cl[idx])) ''
+        printf "%b\n" "${ansi[$idx]}"
     fi
 done
 
