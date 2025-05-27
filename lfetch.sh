@@ -2,110 +2,79 @@
 
 start=$(date +%s%N)
 
-cache_dir="${XDG_CACHE_HOME:-$HOME/.cache}/lfetch"
-mkdir -p "$cache_dir"
-
 script_dir=$(cd "$(dirname "${BASH_SOURCE[0]}")" &> /dev/null && pwd)
 logo_dirs=(
-    "$script_dir/logos"                 
-    "/usr/share/lfetch/logos"           
-    "/usr/local/share/lfetch/logos"     
+    "$script_dir/logos" 
+    "/usr/share/lfetch/logos"
+    "/usr/local/share/lfetch/logos"
 )
 
 for dir in "${logo_dirs[@]}"; do
     [[ -d "$dir" ]] && logod="$dir" && break
 done
 
-[[ -z "$logod" ]] && logod="/dev/null"
-
 R=$'\033[0m' BOLD=$'\033[1m'
 RED=$'\033[91m' GR=$'\033[92m' YE=$'\033[93m' BLUE=$'\033[94m'
 M=$'\033[95m' CYAN=$'\033[96m' WH=$'\033[97m'
 
-if [[ ! -f "$cache_dir/static" ]]; then
-    {
-        IFS=\" read _ d _ < /etc/os-release
-        grep -m1 'model name' /proc/cpuinfo | cut -d: -f2 | sed 's/  */ /g' | read cpu
-        printf "h='%s'\nu='%s'\no='%s'\nsh='%s'\nd='%s'\ncpu='%s'\ncores=%d\n" \
-            "$HOSTNAME" "${USER:-$USER}" "${OSTYPE%%[-_]*}" "${SHELL##*/}" \
-            "${d%% *}" "$cpu" $(nproc)
-    } > "$cache_dir/static"
-fi
-. "$cache_dir/static"
-
-if [[ ! -f "$cache_dir/dyn" || $(( $(date +%s) - $(stat -c %Y "$cache_dir/dyn") )) -gt 60 ]]; then
-    {
-        read -r up _ </proc/uptime
-        read -r _ mem _ mem_free _ <<< $(grep -m1 -e MemTotal -e MemAvailable /proc/meminfo)
-        read -r _ _ used disk_avail _ <<< $(df -k / | awk 'NR==2')
-        printf "k='%s'\nde='%s'\nup='%dh%02dm'\nmem='%dMB/%dMB'\ndisk='%dMB/%dMB'\nip='%s'\nload='%s'\n" \
-            "$(uname -r)" "${XDG_CURRENT_DESKTOP:-?}" \
-            $(( ${up%.*}/3600 )) $(( (${up%.*}%3600)/60 )) \
-            $((mem/1024)) $((mem_free/1024)) \
-            $((used/1024)) $(( (used + disk_avail)/1024 )) \
-            "$(ip -4 -br addr | awk 'NR>1 && $3 {print $3; exit}')" \
-            "$(cut -d' ' -f1-3 /proc/loadavg)"
-    } > "$cache_dir/dyn"
-fi
-. "$cache_dir/dyn"
-
-logof="Linux"
-logo_search_name="$d"
-[[ "${d,,}" == "alpine" ]] && logo_search_name="Arch"
-for distro in "${logo_search_name,,}" "${logo_search_name^^}" "${logo_search_name~~}"; do
-    if [[ -f "$logod/$distro" ]]; then
-        logof="$distro"
-        break
-    fi
-done
-
-if [[ ! -f "$cache_dir/logo" || ! -f "$cache_dir/ansi" ]]; then
-    declare -ai cl
-    declare -a ansi
-    local w=0 line cle
+get_info() {
+    # Static
+    IFS=\" read -r _ d _ < /etc/os-release
+    d="${d/Alpine Linux/Alpine}"
+    cpu=$(grep -m1 'model name' /proc/cpuinfo | cut -d: -f2 | sed 's/  */ /g')
+    cores=$(nproc)
     
-    while IFS= read -r line; do
-        ansi_line="${line//\\033/\x1b}"
-        ansi+=("$ansi_line")
-        cle=${ansi_line//\x1b\[[0-9;]*m/}
-        cle=${cle%%+([[:space:]])}
-        (( (len=${#cle}) > w )) && w=$len
-        cl+=($len)
-    done < <([[ -f "$logod/$logof" ]] && cat "$logod/$logof" || echo "NO LOGO FOUND")
+    # Dynamic
+    read -r up _ < /proc/uptime
+    mem=$(grep -m1 MemTotal /proc/meminfo | awk '{print $2/1024}')
+    mem_free=$(grep -m1 MemAvailable /proc/meminfo | awk '{print $2/1024}')
+    disk=$(df -k / | awk 'NR==2 {print $3/1024"MB/"($3+$4)/1024"MB"}')
+ip=$(
+  ip -o -4 addr show eth0 2>/dev/null | 
+  awk '{print $4}' | 
+  head -n1 | 
+  cut -d' ' -f1
+) || ip="N/A"    load=$(cut -d' ' -f1-3 /proc/loadavg)
     
-    for i in "${!ansi[@]}"; do
-        ansi[$i]=$(printf "%-${w}s" "${ansi[$i]}")
-    done
-    
-    declare -p ansi cl > "$cache_dir/ansi"
-    echo "w=$w" > "$cache_dir/logo"
-fi
-. "$cache_dir/ansi"; . "$cache_dir/logo"
+    # Formatting
+    printf -v up "%dh%02dm" $(( ${up%.*}/3600 )) $(( (${up%.*}%3600)/60 ))
+}
+
+get_info
+
+logo="Alpine"
+[[ -f "$logod/$logo" ]] || logo="Linux"
+
+declare -a ansi cl
+w=0
+while IFS= read -r line; do
+    ansi+=("$line")
+    cle=${line//\\033\[[0-9;]*m/}
+    cle=${cle%%+([[:space:]])}
+    (( (len=${#cle}) > w )) && w=$len
+    cl+=("$len")
+done < <([[ -f "$logod/$logo" ]] && cat "$logod/$logo" || echo "NO LOGO FOUND")
 
 i=(
-    "${YE}$u@${M}$h"
-    "${BOLD}${CYAN}OS     ~ ${WH}${o^}"
-    "${BOLD}${CYAN}Kernel ~ ${WH}$k"
+    "${YE}${USER}@${HOSTNAME}${M}"
+    "${BOLD}${CYAN}OS     ~ ${WH}${OSTYPE%%[-_]*^}"
+    "${BOLD}${CYAN}Kernel ~ ${WH}$(uname -r)"
     "${BOLD}${CYAN}Uptime ~ ${WH}$up"
-    "${BOLD}${CYAN}Shell  ~ ${WH}$sh"
-    "${BOLD}${CYAN}DE     ~ ${WH}$de"
+    "${BOLD}${CYAN}Shell  ~ ${WH}${SHELL##*/}"
+    "${BOLD}${CYAN}DE     ~ ${WH}${XDG_CURRENT_DESKTOP:-?}"
     "${BOLD}${CYAN}Distro ~ ${WH}$d"
-    "${BOLD}${CYAN}Memory ~ ${WH}$mem"
+    "${BOLD}${CYAN}Memory ~ ${WH}${mem%.*}MB/${mem_free%.*}MB"
     "${BOLD}${CYAN}Disk   ~ ${WH}$disk"
-    "${BOLD}${CYAN}IP     ~ ${WH}${ip:-N/A}"
+    "${BOLD}${CYAN}IP     ~ ${WH}${ip}"
     "${BOLD}${CYAN}Load   ~ ${WH}$load"
 )
 
 for idx in "${!ansi[@]}"; do
     if (( idx < ${#i[@]} )); then
-        visible_info=$(echo -e "${i[$idx]}" | sed 's/\x1b\[[0-9;]*m//g')
-        visible_len=${#visible_info}
-        
-        padding=$((w - cl[idx] + 10))
-        
-        printf "%b %b%*s\n" "${ansi[$idx]}" "${i[$idx]}" "$padding" ""
+        printf "%b %b%*s\n" "${ansi[idx]}" "${i[idx]}" \
+            $((w - cl[idx] - ${#i[idx]} + 20 )) ''
     else
-        printf "%b\n" "${ansi[$idx]}"
+        printf "%b%*s\n" "${ansi[idx]}" $((w - cl[idx])) ''
     fi
 done
 
