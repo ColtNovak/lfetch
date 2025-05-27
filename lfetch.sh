@@ -1,103 +1,61 @@
 #!/bin/bash
 
-start=$(date +%s%N)
+start=${EPOCHREALTIME//.}
 
-script_dir=$(cd "$(dirname "${BASH_SOURCE[0]}")" &> /dev/null && pwd)
-logo_dirs=(
-    "$script_dir/logos" 
-    "/usr/share/lfetch/logos"
-    "/usr/local/share/lfetch/logos"
-)
+script_dir=$(cd "$(dirname "${BASH_SOURCE[0]}")" 2>/dev/null && pwd)
+logo_dirs=("$script_dir/logos" "/usr/share/lfetch/logos" "/usr/local/share/lfetch/logos")
 
-# Find logo directory
-for dir in "${logo_dirs[@]}"; do
-    [[ -d "$dir" ]] && logod="$dir" && break
-done
+for dir in "${logo_dirs[@]}"; do [[ -d "$dir" ]] && logod="$dir" && break; done
 
-R=$'\033[0m' BOLD=$'\033[1m'
-RED=$'\033[91m' GR=$'\033[92m' YE=$'\033[93m' BLUE=$'\033[94m'
-M=$'\033[95m' CYAN=$'\033[96m' WH=$'\033[97m'
+R=$'\033[0m' B=$'\033[1m' Y=$'\033[93m' M=$'\033[95m' C=$'\033[96m' W=$'\033[97m'
 
 get_info() {
-    # Static
-    IFS=\" read -r _ d _ < /etc/os-release
-    d="${d/Alpine Linux/Alpine}"
-    cpu=$(grep -m1 'model name' /proc/cpuinfo | cut -d: -f2 | sed 's/  */ /g')
-    cores=$(nproc)
-    
-    # Dynamic
-    read -r up _ < /proc/uptime
-    mem=$(grep -m1 MemTotal /proc/meminfo | awk '{print $2/1024}')
-    mem_free=$(grep -m1 MemAvailable /proc/meminfo | awk '{print $2/1024}')
-    disk=$(df -k / | awk 'NR==2 {print $3/1024"MB/"($3+$4)/1024"MB"}')
-    ip=$(
-        ip -o -4 addr show eth0 2>/dev/null | 
-        awk '{print $4}' | 
-        head -n1 | 
-        cut -d' ' -f1
-    ) || ip="N/A"
+    IFS=\" read -r _ d _ </etc/os-release
+    read -r up _ </proc/uptime
+    printf -v up "%dh%02dm" $((${up%.*}/3600)) $((${up%.*}%3600/60))
+    mem=($(grep -m1 MemTotal /proc/meminfo | awk '{print $2/1024}') $(grep -m1 MemAvailable /proc/meminfo | awk '{print $2/1024}'))
+    disk=($(df -k / | awk 'NR==2 {print $3/1024, ($3+$4)/1024}'))
+    ip=$(ip -4 -br a | awk 'NR>1 && $3 {sub(/\/.*/,"",$3); print $3; exit}')
     load=$(cut -d' ' -f1-3 /proc/loadavg)
-    
-    # Formatting
-    printf -v up "%dh%02dm" $(( ${up%.*}/3600 )) $(( (${up%.*}%3600)/60 ))
 }
 
 get_info
 
-# Force Alpine logo detection
 logo="Alpine"
 [[ -f "$logod/$logo" ]] || logo="Linux"
 
-declare -a ansi cl
-declare w=0 line cle
-
-# Read logo with proper ANSI conversion
+declare -a ansi cl w=0
 while IFS= read -r line; do
-    # Convert all escape code formats
-    line=${line//\\x1b/\033}
-    line=${line//\\033/\033}
-    line=${line//\x1b/\033}
+    line=${line//\\x1b/} line=${line//\\033/} line=${line//\x1b/}
     ansi+=("$line")
-    # Calculate visible length
-    cle=${line//\033\[[0-9;]*m/}
-    cle=${cle%%+([[:space:]])}
-    (( (len=${#cle}) > w )) && w=$len
-    cl+=("$len")
-done < <([[ -f "$logod/$logo" ]] && cat "$logod/$logo" || echo "NO LOGO FOUND")
+    len=${#line}; len=$(echo -e "${line//\[[0-9;]*m/}" | wc -m)
+    ((len>w)) && w=$len
+    cl+=($len)
+done < <([[ -f "$logod/$logo" ]] && cat "$logod/$logo" || echo "NO LOGO")
 
-# Pad all logo lines to max width with ANSI reset
-for i in "${!ansi[@]}"; do
-    ansi[$i]="${ansi[$i]%%+([[:space:]])}"
-    ansi[$i]=$(printf "%-${w}s%s" "${ansi[$i]}" "${R}")
-done
+for i in "${!ansi[@]}"; do ansi[i]="${ansi[i]% *}${R}"; done
 
 i=(
-    "${YE}${USER}@${HOSTNAME}${M}"
-    "${BOLD}${CYAN}OS     ~ ${WH}${OSTYPE%%[-_]*^}"
-    "${BOLD}${CYAN}Kernel ~ ${WH}$(uname -r)"
-    "${BOLD}${CYAN}Uptime ~ ${WH}$up"
-    "${BOLD}${CYAN}Shell  ~ ${WH}${SHELL##*/}"
-    "${BOLD}${CYAN}DE     ~ ${WH}${XDG_CURRENT_DESKTOP:-?}"
-    "${BOLD}${CYAN}Distro ~ ${WH}$d"
-    "${BOLD}${CYAN}Memory ~ ${WH}${mem%.*}MB/${mem_free%.*}MB"
-    "${BOLD}${CYAN}Disk   ~ ${WH}$disk"
-    "${BOLD}${CYAN}IP     ~ ${WH}${ip}"
-    "${BOLD}${CYAN}Load   ~ ${WH}$load"
+"${Y}${USER}@${HOSTNAME}${M}"
+"${B}${C}OS     ~ ${W}${OSTYPE%%[-_]*^}"
+"${B}${C}Kernel ~ ${W}$(uname -r)"
+"${B}${C}Uptime ~ ${W}$up"
+"${B}${C}Shell  ~ ${W}${SHELL##*/}"
+"${B}${C}DE     ~ ${W}${XDG_CURRENT_DESKTOP:-?}"
+"${B}${C}Distro ~ ${W}${d/Alpine Linux/Alpine}"
+"${B}${C}Memory ~ ${W}${mem[0]%.*}MB/${mem[1]%.*}MB"
+"${B}${C}Disk   ~ ${W}${disk[0]%.*}MB/${disk[1]%.*}MB"
+"${B}${C}IP     ~ ${W}${ip:-N/A}"
+"${B}${C}Load   ~ ${W}$load"
 )
 
 for idx in "${!ansi[@]}"; do
-    if (( idx < ${#i[@]} )); then
-        # Calculate visible lengths
-        logo_visible=${ansi[$idx]//\033\[[0-9;]*m/}
-        logo_visible=${logo_visible%%+([[:space:]])}
-        info_visible=$(echo -e "${i[$idx]}" | sed 's/\x1b\[[0-9;]*m//g')
-        
-        padding=$((w - ${#logo_visible} - ${#info_visible} + 15))
-        
-        printf "%b %b%*s\n" "${ansi[$idx]}" "${i[$idx]}" "$padding" ""
+    if ((idx < ${#i[@]})); then
+        ilen=$(echo -e "${i[idx]}" | sed 's/\x1b\[[0-9;]*m//g' | wc -m)
+        printf "%b %b%$((w - cl[idx] - ilen + 15))s\n" "${ansi[idx]}" "${i[idx]}" ""
     else
-        printf "%b\n" "${ansi[$idx]}"
+        echo -e "${ansi[idx]}"
     fi
 done
 
-printf "\nTime: $(( ($(date +%s%N) - start)/1000000 )) ms${R}\n"
+printf "\nTime: $(($((${EPOCHREALTIME//.} - start))/1000)) ms${R}\n"
