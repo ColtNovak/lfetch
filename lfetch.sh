@@ -54,7 +54,6 @@ fi
 
 logof="Linux"
 logo_search_name="$d"
-[[ "${d,,}" == "alpine" ]] && logo_search_name="Arch"
 for distro in "${logo_search_name,,}" "${logo_search_name^^}" "${logo_search_name~~}"; do
     if [[ -f "$logod/$distro" ]]; then
         logof="$distro"
@@ -65,7 +64,7 @@ done
 if [[ ! -f "$cache_dir/logo" || ! -f "$cache_dir/ansi" ]]; then
     declare -ai cl
     declare -a ansi
-    local w=0 line cle
+    declare w=0 line cle
     
     while IFS= read -r line; do
         ansi+=("$line")
