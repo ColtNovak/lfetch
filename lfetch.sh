@@ -53,7 +53,9 @@ fi
 . "$cache_dir/dyn"
 
 logof="Linux"
-for distro in "${d,,}" "${d^^}" "${d~~}"; do
+logo_search_name="$d"
+[[ "${d,,}" == "alpine" ]] && logo_search_name="Arch"
+for distro in "${logo_search_name,,}" "${logo_search_name^^}" "${logo_search_name~~}"; do
     if [[ -f "$logod/$distro" ]]; then
         logof="$distro"
         break
