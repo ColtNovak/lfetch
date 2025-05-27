@@ -9,7 +9,6 @@ logo_dirs=(
     "/usr/local/share/lfetch/logos"
 )
 
-# Find logo directory
 for dir in "${logo_dirs[@]}"; do
     [[ -d "$dir" ]] && logod="$dir" && break
 done
@@ -18,7 +17,6 @@ R=$'\033[0m' BOLD=$'\033[1m'
 RED=$'\033[91m' GR=$'\033[92m' YE=$'\033[93m' BLUE=$'\033[94m'
 M=$'\033[95m' CYAN=$'\033[96m' WH=$'\033[97m'
 
-# System info - no caching
 get_info() {
     # Static
     IFS=\" read -r _ d _ < /etc/os-release
@@ -40,7 +38,6 @@ get_info() {
 
 get_info
 
-# Logo handling
 logo="Alpine"
 [[ -f "$logod/$logo" ]] || logo="Linux"
 
@@ -54,7 +51,6 @@ while IFS= read -r line; do
     cl+=("$len")
 done < <([[ -f "$logod/$logo" ]] && cat "$logod/$logo" || echo "NO LOGO FOUND")
 
-# Info lines
 i=(
     "${YE}${USER}@${HOSTNAME}${M}"
     "${BOLD}${CYAN}OS     ~ ${WH}${OSTYPE%%[-_]*^}"
@@ -69,7 +65,6 @@ i=(
     "${BOLD}${CYAN}Load   ~ ${WH}$load"
 )
 
-# Display
 for idx in "${!ansi[@]}"; do
     if (( idx < ${#i[@]} )); then
         printf "%b %b%*s\n" "${ansi[idx]}" "${i[idx]}" \
