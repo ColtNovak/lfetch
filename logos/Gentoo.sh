@@ -1,4 +1,4 @@
-\033[95m    -o\033[97mdNMMMMMMMMNNmhy+\033[95m                        
+.\033[95m    -o\033[97mdNMMMMMMMMNNmhy+\033[95m                        
 \033[95m  -y\033[97mNMMMMMMMMMMMNNNmmdhy\033[95m+-                    
 \033[95m  o\033[97mmMMMMMMMMMMMMNmdmmmmddhhy\033[95m                  
 \033[95m om\033[97mMMMMMMMMMMMN\033[95mhhyyyo\033[97mhmdddhhhd\033[95mo               
